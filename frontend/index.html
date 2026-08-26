@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real-Time Search Re-Ranking Engine | Anish Raj Pandey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --card-border: #dadce0;
+      --accent: #1a73e8;
+      --accent-hover: #1557b0;
+      --accent-link: #1a0dab;
+      --text-primary: #202124;
+      --text-secondary: #4d5156;
+      --text-muted: #70757a;
+      --success: #188038;
+      --success-bg: #e6f4ea;
+      --chip-bg: #f1f3f4;
+      --chip-active-bg: #e8f0fe;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    /* Layout Wrapper: Main Search + Side Telemetry Panel */
+    .app-wrapper {
+      display: flex;
+      gap: 32px;
+      width: 100%;
+      max-width: 1280px;
+      align-items: flex-start;
+      margin: 0 auto;
+    }
+    .main-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Header & Google Color Title */
+    .header {
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+    }
+    .header h1 .live-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(24, 128, 56, 0.4);
+      display: inline-block;
+    }
+
+    /* Google Signature 4-Color Title Palette for "Search" */
+    .google-search-title {
+      font-weight: 700;
+      display: inline-flex;
+    }
+    .g-blue { color: #4285F4; }
+    .g-red { color: #EA4335; }
+    .g-yellow { color: #FBBC05; }
+    .g-green { color: #34A853; }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    /* Author & GitHub Attribution Bar */
+    .author-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .author-dot {
+      color: var(--text-muted);
+    }
+    .github-link {
+      color: var(--accent-link);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 500;
+    }
+    .github-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Search Bar (Google Light Pill Style) */
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .search-input-box {
+      display: flex;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 6px 10px 6px 18px;
+      box-shadow: 0 1px 6px rgba(32, 33, 36, 0.12);
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-input-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 1px 8px rgba(26, 115, 232, 0.3);
+    }
+    .search-icon-svg {
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      color: var(--text-muted);
+    }
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+    .search-btn {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 8px 22px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .search-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Query Chips (Google Light Filter Chips) */
+    .pills-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .pills-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      width: 100%;
+      margin-bottom: 2px;
+    }
+    .pill {
+      background: var(--chip-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: 18px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill:hover {
+      background: #e8eaed;
+      color: var(--text-primary);
+    }
+    .pill.active {
+      background: var(--chip-active-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Status / Telemetry Banner */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0 4px 12px 4px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 16px;
+    }
+    .status-bar b {
+      color: var(--text-secondary);
+    }
+
+    /* Product Result Cards */
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.12);
+      will-change: transform;
+      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .product-card:hover {
+      border-color: #bdc1c6;
+      box-shadow: 0 4px 12px rgba(60, 64, 67, 0.18);
+    }
+    .product-card:hover .product-info h3 {
+      text-decoration: underline;
+    }
+    
+    /* Real-Time Rank Swap Highlights */
+    .product-card.clicked-flash {
+      border-color: var(--accent);
+      background: var(--chip-active-bg);
+      box-shadow: 0 0 12px rgba(26, 115, 232, 0.3);
+    }
+    .product-card.rank-up-highlight {
+      border-color: var(--success) !important;
+      background: var(--success-bg) !important;
+      box-shadow: 0 0 16px rgba(24, 128, 56, 0.3) !important;
+    }
+
+    .product-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .rank-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: #f8f9fa;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent);
+      transition: all 0.3s ease;
+    }
+    .rank-indicator span {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .product-info h3 {
+      font-size: 1.05rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: var(--accent-link);
+    }
+    .product-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+    .meta-dot {
+      color: var(--text-muted);
+    }
+
+    .product-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .score-badge {
+      background: var(--chip-active-bg);
+      border: 1px solid rgba(26, 115, 232, 0.3);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.82rem;
+      transition: all 0.3s ease;
+    }
+    .click-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* FAQ Section Placed BELOW Results List */
+    .faq-section {
+      margin: 32px 0 24px 0;
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+    }
+    .faq-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .faq-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .faq-item {
+      border: 1px solid #e8eaed;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f8f9fa;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .faq-item[open] {
+      background: #ffffff;
+      border-color: var(--card-border);
+    }
+    .faq-question {
+      padding: 10px 14px;
+      font-size: 0.86rem;
+      font-weight: 500;
+      color: var(--accent);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .faq-question:hover {
+      background: #e8f0fe;
+    }
+    .faq-answer {
+      padding: 10px 14px 14px 14px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      border-top: 1px solid #f1f3f4;
+    }
+
+    /* Side Event Inspector Panel */
+    .event-side-panel {
+      width: 420px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 40px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(60, 64, 67, 0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      opacity: 0.4;
+      transform: scale(0.98);
+      transition: all 0.25s ease;
+    }
+    .event-side-panel.active {
+      opacity: 1;
+      transform: scale(1);
+      border-color: var(--accent);
+      box-shadow: 0 6px 24px rgba(26, 115, 232, 0.2);
+    }
+    .event-side-panel.event-flash {
+      border-color: var(--success);
+      box-shadow: 0 6px 24px rgba(24, 128, 56, 0.25);
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      background: #f1f3f4;
+    }
+    .panel-title-group h2 {
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .event-badge {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid var(--success);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .panel-subtitle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .category-badge {
+      background: #e8eaed;
+      color: var(--text-primary);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .close-btn {
+      background: #e8eaed;
+      border: none;
+      color: var(--text-secondary);
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .close-btn:hover {
+      background: #dadce0;
+      color: var(--text-primary);
+    }
+
+    .panel-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+    }
+
+    /* Product Hero Info Card */
+    .hero-card {
+      background: #f8f9fa;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .hero-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hero-price {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .hero-rating {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      background: #e8eaed;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+    .hero-desc {
+      font-size: 0.85rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+
+    /* Re-Ranking Telemetry Card */
+    .telemetry-card {
+      background: #f8f9fa;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .telemetry-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .stat-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .stat-value.boost {
+      color: var(--success);
+    }
+
+    /* Specs Grid */
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .spec-item {
+      background: #f8f9fa;
+      border: 1px solid var(--card-border);
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .spec-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .spec-val {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* Kafka Event Code Output */
+    .kafka-stream-box {
+      background: #202124;
+      border: 1px solid #3c4043;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Roboto Mono, Consolas, monospace;
+      font-size: 0.75rem;
+      color: #e8eaed;
+    }
+    .kafka-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      color: #9aa0a6;
+      font-size: 0.7rem;
+    }
+    .kafka-status {
+      color: #81c995;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .kafka-code {
+      color: #8ab4f8;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    @media (max-width: 960px) {
+      .app-wrapper {
+        flex-direction: column;
+      }
+      .event-side-panel {
+        width: 100%;
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+  <!-- Main Search Container -->
+  <main class="main-content">
+    <!-- Header with Google Color Combination for "Search" -->
+    <div class="header">
+      <h1>
+        <span class="live-dot"></span>
+        Real-Time
+        <span class="google-search-title">
+          <span class="g-blue">S</span><span class="g-red">e</span><span class="g-yellow">a</span><span class="g-blue">r</span><span class="g-green">c</span><span class="g-red">h</span>
+        </span>
+        Re-Ranker
+      </h1>
+      <p>Simulating live user query feedback. Click any product to stream an interaction to Kafka, calculate propensity weights, and trigger sub-millisecond Redis re-ordering.</p>
+      
+      <!-- Author & GitHub Repo Attribution -->
+      <div class="author-bar">
+        <span>Created by <b>Anish Raj Pandey</b></span>
+        <span class="author-dot">•</span>
+        <a class="github-link" href="https://github.com/anishrajpandey/search-reranking-engine" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          anishrajpandey/search-reranking-engine
+        </a>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-wrapper">
+      <div class="search-input-box">
+        <div class="search-icon-svg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <input type="text" id="searchInput" class="search-input" value="mechanical keyboard" placeholder="Search catalog..." onkeydown="handleKeyDown(event)" />
+        <button class="search-btn" onclick="executeSearch()">Search</button>
+      </div>
+    </div>
+
+    <!-- Suggestion Pills (6 Sample Queries) -->
+    <div class="pills-container">
+      <span class="pills-label">Sample Queries:</span>
+      <button class="pill" onclick="setQuery('wireless headphones')">wireless headphones</button>
+      <button class="pill active" onclick="setQuery('mechanical keyboard')">mechanical keyboard</button>
+      <button class="pill" onclick="setQuery('4k monitor')">4k monitor</button>
+      <button class="pill" onclick="setQuery('gaming laptop')">gaming laptop</button>
+      <button class="pill" onclick="setQuery('smartwatch')">smartwatch</button>
+      <button class="pill" onclick="setQuery('noise canceling earbuds')">noise canceling earbuds</button>
+    </div>
+
+    <!-- Status / Telemetry -->
+    <div class="status-bar">
+      <span id="resultsHeader">Showing results for: <b>mechanical keyboard</b></span>
+      <span id="latencyHeader">Serving latency: <b>~1.2ms (Redis In-Memory)</b></span>
+    </div>
+
+    <!-- Results List (Search Items) -->
+    <div class="results-list" id="resultsContainer"></div>
+
+    <!-- FAQ Accordion Section Placed BELOW Search Results List -->
+    <div class="faq-section">
+      <div class="faq-title">Engine Architecture & FAQs</div>
+      <div class="faq-grid">
+        <details class="faq-item" open>
+          <summary class="faq-question">What is Real-Time Search Re-Ranking?</summary>
+          <div class="faq-answer">
+            Traditional e-commerce search relies on static BM25 or offline batch model scores that update once every few days. Real-time re-ranking listens to live user interaction streams (clicks, dwell times, conversions) to dynamically re-score search candidate lists in sub-milliseconds without waiting for offline model retraining.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">How does Inverse Propensity Scoring (IPS) work?</summary>
+          <div class="faq-answer">
+            Users disproportionately click top search results due to position bias, regardless of relevancy. Inverse Propensity Scoring corrects for this by assigning inverse rank weights <code>w(k) = 1 / &radic;k</code>. A click on rank #3 yields a higher positive propensity signal than a click on rank #1, ensuring fair item discovery.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">What technology stack powers this real-time pipeline?</summary>
+          <div class="faq-answer">
+            The pipeline streams click payloads into an <b>Apache Kafka</b> event topic. A Python <b>Stream Processor</b> consumes events, calculates propensity weights, and writes updated document scores directly to <b>Redis Sorted Sets (ZSETs)</b>, served via a high-performance <b>FastAPI Gateway</b>.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Why is serving latency sub-2 milliseconds?</summary>
+          <div class="faq-answer">
+            Redis Sorted Sets store key-value score maps entirely in-memory with <code>O(log N + M)</code> lookup time. Re-ranking queries query Redis ZSETs directly in RAM, achieving sub-2ms round-trip latency without touching disk or executing heavy inference models.
+          </div>
+        </details>
+      </div>
+    </div>
+  </main>
+
+  <!-- Side Event Inspector Panel -->
+  <aside class="event-side-panel" id="eventSidePanel" aria-label="Live event inspector">
+    <div class="panel-header">
+      <div class="panel-title-group">
+        <h2 id="panelTitle">
+          <span id="panelTitleText">Product Event Inspector</span>
+          <span class="event-badge" id="eventFlashBadge">LIVE EVENT</span>
+        </h2>
+        <div class="panel-subtitle">
+          <span class="category-badge" id="panelCategory">Category</span>
+          <span id="panelDocId">Select a product...</span>
+        </div>
+      </div>
+      <button class="close-btn" onclick="closeSidePanel()" aria-label="Close inspector">&times;</button>
+    </div>
+
+    <div class="panel-body">
+      <!-- Hero Product Info -->
+      <div class="hero-card">
+        <div class="hero-price-row">
+          <span class="hero-price" id="panelPrice">$0.00</span>
+          <span class="hero-rating" id="panelRating">Rating: 5.0</span>
+        </div>
+        <p class="hero-desc" id="panelDesc">Click any document card on the left to simulate a real user click event and inspect live telemetry.</p>
+      </div>
+
+      <!-- Re-Ranking Engine Live Metrics -->
+      <div class="telemetry-card">
+        <div class="telemetry-title">REAL-TIME IPS RE-RANKING TELEMETRY</div>
+        <div class="telemetry-grid">
+          <div class="stat-box">
+            <div class="stat-label">Current Position</div>
+            <div class="stat-value" id="panelCurrentRank">#--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Catalog Base Rank</div>
+            <div class="stat-value" id="panelBaseRank">Base #--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Redis ZSET Score</div>
+            <div class="stat-value boost" id="panelScore">0.00 pts</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">IPS Click Weight</div>
+            <div class="stat-value" id="panelWeight">1.00x</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Specifications Grid -->
+      <div class="specs-grid" id="panelSpecs"></div>
+
+      <!-- Kafka Event Stream Box -->
+      <div class="kafka-stream-box">
+        <div class="kafka-header">
+          <span>KAFKA PRODUCER EVENT STREAM</span>
+          <span class="kafka-status">Topic: search-click-logs</span>
+        </div>
+        <div class="kafka-code" id="panelKafkaPayload">// Click any item to stream a live click payload...</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const API_BASE = "http://localhost:8000";
+
+  // Comprehensive Product Metadata Catalog
+  const METADATA = {
+    // Headphones
+    "doc_apple_airpods": { price: "$249.00", rating: "4.8 (12.4k reviews)", category: "Audio", description: "Apple AirPods Pro featuring active noise cancellation, adaptive transparency mode, and personalized spatial audio.", specs: { "Battery": "6 hrs / 30 hrs case", "Chip": "Apple H2", "Noise Cancel": "Active 2x", "Connectivity": "Bluetooth 5.3" } },
+    "doc_sony_wh1000": { price: "$398.00", rating: "4.9 (8.1k reviews)", category: "Audio", description: "Industry-leading noise canceling headphones with Auto NC Optimizer, crystal-clear hands-free calling, and 30-hour battery life.", specs: { "Battery": "30 hrs", "Drivers": "30mm Precision", "Microphones": "8 Mics", "Codec": "LDAC / AAC / SBC" } },
+    "doc_bose_700": { price: "$379.00", rating: "4.7 (5.2k reviews)", category: "Audio", description: "Premium over-ear headphones with 11 levels of active noise canceling, revolutionary voice pickup system, and sleek steel design.", specs: { "Battery": "20 hrs", "NC Levels": "11 Customizable", "Controls": "Touch / Gesture", "Weight": "250g" } },
+
+    // Keyboards
+    "doc_keychron_k2": { price: "$79.99", rating: "4.7 (3.4k reviews)", category: "Keyboards", description: "Tactile 75% compact wireless mechanical keyboard designed for Mac & Windows with hot-swappable Gateron mechanical switches.", specs: { "Layout": "75% Compact", "Connectivity": "Bluetooth 5.1 / USB-C", "Battery": "4000 mAh", "Keycaps": "PBT Double-shot" } },
+    "doc_logitech_mx": { price: "$149.99", rating: "4.6 (1.9k reviews)", category: "Keyboards", description: "Ultra-precise mechanical keyboard with tactile quiet low-profile switches, smart backlighting, and multi-device Logi Options+ support.", specs: { "Switches": "Low Profile Tactile", "Backlight": "Smart Auto-Sensing", "Multi-Device": "Up to 3 Devices", "Battery": "15 days" } },
+    "doc_gmmk_pro": { price: "$169.99", rating: "4.8 (950 reviews)", category: "Keyboards", description: "Gasket-mounted 75% enthusiast barebones keyboard featuring an aluminum CNC case, programmable rotary encoder knob, and RGB illumination.", specs: { "Mount": "Gasket Mount", "Case": "CNC Aluminum", "Encoder": "Programmable Knob", "RGB": "Per-key & Sidelighting" } },
+
+    // Displays
+    "doc_dell_u2720q": { price: "$529.99", rating: "4.8 (4.1k reviews)", category: "Displays", description: "UltraSharp 27-inch 4K UHD IPS monitor with 95% DCI-P3 color gamut, USB-C 90W power delivery, and ultra-thin bezel design.", specs: { "Resolution": "3840 x 2160 4K", "Panel": "IPS (95% DCI-P3)", "Power Delivery": "90W USB-C", "Refresh Rate": "60Hz" } },
+    "doc_lg_27uk850": { price: "$379.99", rating: "4.6 (2.3k reviews)", category: "Displays", description: "27-inch 4K UHD IPS display featuring HDR10 compliance, AMD FreeSync support, USB Type-C connectivity, and borderless design.", specs: { "Resolution": "3840 x 2160 4K", "HDR": "HDR10 Support", "Sync": "AMD FreeSync", "Ports": "USB-C / HDMI 2.0 / DP" } },
+    "doc_asus_proart": { price: "$449.00", rating: "4.7 (1.1k reviews)", category: "Displays", description: "Color-accurate 27-inch 4K monitor factory calibrated for Calman Verified 100% sRGB/Rec. 709 color coverage for creative professionals.", specs: { "Accuracy": "Delta E < 2 Calibrated", "Color Space": "100% sRGB / Rec.709", "Stand": "Ergonomic 4-way", "Ports": "DisplayPort / HDMI / USB Hub" } },
+
+    // Gaming Laptop
+    "doc_rog_zephyrus": { price: "$1,599.99", rating: "4.8 (1.8k reviews)", category: "Laptops", description: "Ultra-portable 14-inch QHD+ 165Hz OLED gaming laptop powered by AMD Ryzen 9 and NVIDIA GeForce RTX 4070 graphics.", specs: { "Processor": "Ryzen 9 8945HS", "GPU": "RTX 4070 8GB", "Display": "14\" OLED 120Hz", "RAM/Storage": "32GB / 1TB NVMe" } },
+    "doc_lenovo_legion": { price: "$2,299.99", rating: "4.9 (920 reviews)", category: "Laptops", description: "High-performance gaming laptop with 16-inch WQXGA 240Hz display, Intel Core i9-14900HX, and AI engine cooling optimization.", specs: { "Processor": "Intel i9-14900HX", "GPU": "RTX 4080 12GB", "Display": "16\" 240Hz WQXGA", "RAM/Storage": "32GB / 2TB NVMe" } },
+    "doc_razer_blade": { price: "$2,999.99", rating: "4.7 (640 reviews)", category: "Laptops", description: "Precision-milled CNC aluminum gaming laptop with Dual-Mode Mini-LED display (4K 120Hz / FHD+ 240Hz) and Vapor Chamber cooling.", specs: { "Processor": "Intel i9-14900HX", "GPU": "RTX 4090 16GB", "Display": "16\" Dual-Mode Mini-LED", "Chassis": "Anodized Aluminum" } },
+
+    // Smartwatch
+    "doc_apple_watch": { price: "$399.00", rating: "4.8 (8.9k reviews)", category: "Wearables", description: "Smartwatch featuring the S9 SiP, Double Tap gesture, brighter Always-On Retina display, and advanced health sensors.", specs: { "Display": "Always-On Retina 2000 nits", "Chip": "Apple S9 SiP", "Sensors": "ECG, Blood Oxygen, Temp", "Water Resistance": "50m WR50" } },
+    "doc_galaxy_watch": { price: "$329.99", rating: "4.6 (3.1k reviews)", category: "Wearables", description: "Classic smartwatch with physical rotating bezel, sapphire crystal glass, personalized HR zones, and Advanced Sleep Coaching.", specs: { "Bezel": "Physical Rotating", "Display": "Sapphire Crystal Super AMOLED", "OS": "Wear OS powered by Samsung", "Battery": "Up to 40 hrs" } },
+    "doc_garmin_epix": { price: "$899.99", rating: "4.9 (1.4k reviews)", category: "Wearables", description: "Ultimate multisport GPS smartwatch with 1.4-inch AMOLED display, built-in LED flashlight, multi-band GPS, and 31-day battery life.", specs: { "Display": "1.4\" AMOLED", "Flashlight": "Multi-LED Built-in", "GPS": "Multi-Band SatIQ", "Battery": "Up to 31 days (Smartwatch)" } },
+
+    // Noise Canceling Earbuds
+    "doc_sony_wf1000": { price: "$299.99", rating: "4.7 (4.2k reviews)", category: "Audio", description: "Flagship wireless noise-canceling earbuds powered by Integrated Processor V2 and Dynamic Driver X for studio-quality acoustic detail.", specs: { "Processor": "V2 & QN2e Dual Chip", "Noise Cancel": "Dual Feedback Mics", "Codec": "LDAC Hi-Res Audio", "Battery": "8 hrs / 24 hrs case" } },
+    "doc_bose_qc": { price: "$299.00", rating: "4.6 (2.9k reviews)", category: "Audio", description: "Immersive spatial audio earbuds featuring CustomTune technology, Quiet & Aware Modes, and soft umbrella-shaped stability bands.", specs: { "Spatial Audio": "Bose Immersive Audio", "Customization": "CustomTune Sound Calibration", "Noise Cancel": "World-Class Noise Cancellation", "Battery": "6 hrs / 24 hrs case" } },
+    "doc_sennheiser_tw4": { price: "$299.95", rating: "4.8 (880 reviews)", category: "Audio", description: "Audiophile-grade wireless earbuds with TrueResponse driver system, lossless audio support (Snapdragon Sound & aptX Lossless), and LE Audio.", specs: { "Sound Engine": "TrueResponse 7mm Transducer", "Codec": "aptX Lossless / LE Audio", "Wireless Charge": "Qi Wireless Case", "Battery": "7.5 hrs / 30 hrs case" } }
+  };
+
+  function setQuery(query) {
+    document.getElementById("searchInput").value = query;
+    document.querySelectorAll(".pill").forEach(p => {
+      p.classList.toggle("active", p.innerText === query);
+    });
+    executeSearch();
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") {
+      executeSearch();
+    }
+  }
+
+  async function executeSearch() {
+    const query = document.getElementById("searchInput").value.trim();
+    if (!query) return;
+
+    document.getElementById("resultsHeader").innerHTML = `Showing results for: <b>${query}</b>`;
+
+    try {
+      const start = performance.now();
+      const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+      const latency = (performance.now() - start).toFixed(1);
+      
+      if (!res.ok) {
+        document.getElementById("resultsContainer").innerHTML = `<div style="color: #d93025; padding: 20px 0;">Cannot reach API Gateway at http://localhost:8000. Is FastAPI running?</div>`;
+        return;
+      }
+
+      const data = await res.json();
+      document.getElementById("latencyHeader").innerHTML = `Round-trip: <b>${latency}ms</b> | Engine: <b>Redis ZSET</b>`;
+      renderResults(data.results, query);
+    } catch (err) {
+      console.error("Fetch failed:", err);
+      document.getElementById("resultsContainer").innerHTML = `<div style="color: #d93025; padding: 20px 0;">Cannot reach API Gateway at http://localhost:8000. Is FastAPI running?</div>`;
+    }
+  }
+
+  function renderResults(results, query) {
+    const container = document.getElementById("resultsContainer");
+    const firstPositions = {};
+
+    // 1. Record FIRST positions before DOM update (FLIP technique)
+    Array.from(container.children).forEach(child => {
+      const docId = child.getAttribute("data-doc-id");
+      if (docId) {
+        firstPositions[docId] = child.getBoundingClientRect().top;
+      }
+    });
+
+    // 2. Re-render DOM elements
+    container.innerHTML = "";
+    const newCardEntries = [];
+
+    results.forEach((item, index) => {
+      const currentRank = index + 1;
+      const meta = METADATA[item.id] || { price: "$99.99", rating: "4.5", category: "Hardware" };
+      
+      const card = document.createElement("div");
+      card.className = "product-card";
+      card.id = `card-${item.id}`;
+      card.setAttribute("data-doc-id", item.id);
+      card.innerHTML = `
+        <div class="product-left">
+          <div class="rank-indicator">
+            #${currentRank}
+            <span>Base #${item.base_rank}</span>
+          </div>
+          <div class="product-info">
+            <h3>${item.title}</h3>
+            <div class="product-meta">
+              <span>${meta.price}</span>
+              <span class="meta-dot">•</span>
+              <span>${meta.rating}</span>
+              <span class="meta-dot">•</span>
+              <span>${meta.category}</span>
+            </div>
+          </div>
+        </div>
+        <div class="product-right">
+          <span class="score-badge">Score: ${item.realtime_score.toFixed(2)} pts</span>
+          <span class="click-hint">Click to inspect live event</span>
+        </div>
+      `;
+
+      card.onclick = () => handleProductClick(query, item, currentRank);
+      container.appendChild(card);
+      newCardEntries.push({ element: card, docId: item.id });
+    });
+
+    // 3. FLIP Animation: LAST, INVERT, and PLAY
+    requestAnimationFrame(() => {
+      newCardEntries.forEach(({ element, docId }) => {
+        const firstTop = firstPositions[docId];
+        if (firstTop !== undefined) {
+          const lastTop = element.getBoundingClientRect().top;
+          const deltaY = firstTop - lastTop;
+
+          if (Math.abs(deltaY) > 2) {
+            // Invert
+            element.style.transform = `translateY(${deltaY}px)`;
+            element.style.transition = "none";
+
+            if (deltaY > 0) {
+              element.classList.add("rank-up-highlight");
+            }
+
+            // Force reflow
+            element.offsetHeight;
+
+            // Play smooth swap transition
+            element.style.transition = "transform 0.55s cubic-bezier(0.2, 0, 0, 1), background-color 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease";
+            element.style.transform = "translateY(0)";
+
+            setTimeout(() => {
+              element.classList.remove("rank-up-highlight");
+              element.style.transition = "";
+              element.style.transform = "";
+            }, 650);
+          }
+        }
+      });
+    });
+  }
+
+  async function handleProductClick(query, item, currentRank) {
+    const docId = item.id;
+    const card = document.getElementById(`card-${docId}`);
+    if (card) {
+      card.classList.add("clicked-flash");
+      setTimeout(() => card.classList.remove("clicked-flash"), 600);
+    }
+
+    updateSidePanel(item, currentRank, query);
+
+    try {
+      const payload = {
+        query: query,
+        clicked_doc_id: docId,
+        rank_position: currentRank
+      };
+
+      await fetch(`${API_BASE}/click`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const fullKafkaPayload = {
+        ...payload,
+        timestamp: Math.floor(Date.now() / 1000),
+        ips_weight: (1.0 / Math.sqrt(currentRank)).toFixed(3),
+        status: "EVENT_DELIVERED_TO_KAFKA"
+      };
+      document.getElementById("panelKafkaPayload").innerText = JSON.stringify(fullKafkaPayload, null, 2);
+
+      const panel = document.getElementById("eventSidePanel");
+      panel.classList.add("event-flash");
+      setTimeout(() => panel.classList.remove("event-flash"), 600);
+
+      setTimeout(async () => {
+        await executeSearch();
+        const updatedRes = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+        if (updatedRes.ok) {
+          const updatedData = await updatedRes.json();
+          const matchIndex = updatedData.results.findIndex(r => r.id === docId);
+          if (matchIndex !== -1) {
+            const updatedItem = updatedData.results[matchIndex];
+            document.getElementById("panelCurrentRank").innerText = `#${matchIndex + 1}`;
+            document.getElementById("panelScore").innerText = `${updatedItem.realtime_score.toFixed(2)} pts`;
+          }
+        }
+      }, 180);
+    } catch (err) {
+      console.error("Click delivery failed:", err);
+    }
+  }
+
+  function updateSidePanel(item, currentRank, query) {
+    const meta = METADATA[item.id] || {
+      price: "$99.99",
+      rating: "4.5",
+      category: "Hardware",
+      description: "Standard hardware item in catalog.",
+      specs: { "Status": "Active Catalog Item" }
+    };
+
+    document.getElementById("panelTitleText").innerText = item.title;
+    document.getElementById("panelCategory").innerText = meta.category;
+    document.getElementById("panelDocId").innerText = item.id;
+    document.getElementById("panelPrice").innerText = meta.price;
+    document.getElementById("panelRating").innerText = meta.rating;
+    document.getElementById("panelDesc").innerText = meta.description;
+
+    document.getElementById("panelCurrentRank").innerText = `#${currentRank}`;
+    document.getElementById("panelBaseRank").innerText = `Base #${item.base_rank}`;
+    document.getElementById("panelScore").innerText = `${item.realtime_score.toFixed(2)} pts`;
+    
+    const weight = (1.0 / Math.sqrt(currentRank)).toFixed(3);
+    document.getElementById("panelWeight").innerText = `${weight}x`;
+
+    const specsContainer = document.getElementById("panelSpecs");
+    specsContainer.innerHTML = "";
+    if (meta.specs) {
+      Object.entries(meta.specs).forEach(([key, val]) => {
+        const div = document.createElement("div");
+        div.className = "spec-item";
+        div.innerHTML = `<div class="spec-label">${key}</div><div class="spec-val">${val}</div>`;
+        specsContainer.appendChild(div);
+      });
+    }
+
+    const kafkaPayload = {
+      query: query,
+      clicked_doc_id: item.id,
+      rank_position: currentRank,
+      timestamp: Math.floor(Date.now() / 1000),
+      ips_weight: weight,
+      status: "EMITTING_TO_GATEWAY"
+    };
+    document.getElementById("panelKafkaPayload").innerText = JSON.stringify(kafkaPayload, null, 2);
+
+    document.getElementById("eventSidePanel").classList.add("active");
+  }
+
+  function closeSidePanel() {
+    document.getElementById("eventSidePanel").classList.remove("active");
+  }
+
+  executeSearch();
+</script>
+
+</body>
+</html>

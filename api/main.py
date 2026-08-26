@@ -2,11 +2,20 @@ import json
 import time
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import redis
 from confluent_kafka import Producer
 
 app = FastAPI(title="Real-Time Search Re-Ranking Engine", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 1. Connect to Redis & Kafka
 r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
@@ -29,6 +38,21 @@ DOCUMENT_CATALOG = {
         {"id": "doc_dell_u2720q", "title": "Dell UltraSharp U2720Q 27-inch 4K", "base_rank": 1},
         {"id": "doc_lg_27uk850", "title": "LG 27UK850-W 27-Inch 4K UHD", "base_rank": 2},
         {"id": "doc_asus_proart", "title": "ASUS ProArt Display PA279CV 4K", "base_rank": 3},
+    ],
+    "gaming laptop": [
+        {"id": "doc_rog_zephyrus", "title": "ASUS ROG Zephyrus G14 Gaming Laptop", "base_rank": 1},
+        {"id": "doc_lenovo_legion", "title": "Lenovo Legion Pro 7i Gen 8 Intel", "base_rank": 2},
+        {"id": "doc_razer_blade", "title": "Razer Blade 16 Gaming Laptop 240Hz", "base_rank": 3},
+    ],
+    "smartwatch": [
+        {"id": "doc_apple_watch", "title": "Apple Watch Series 9 GPS 45mm", "base_rank": 1},
+        {"id": "doc_galaxy_watch", "title": "Samsung Galaxy Watch 6 Classic", "base_rank": 2},
+        {"id": "doc_garmin_epix", "title": "Garmin Epix Pro Gen 2 Sapphire", "base_rank": 3},
+    ],
+    "noise canceling earbuds": [
+        {"id": "doc_sony_wf1000", "title": "Sony WF-1000XM5 Wireless Earbuds", "base_rank": 1},
+        {"id": "doc_bose_qc", "title": "Bose QuietComfort Ultra Earbuds", "base_rank": 2},
+        {"id": "doc_sennheiser_tw4", "title": "Sennheiser Momentum True Wireless 4", "base_rank": 3},
     ]
 }
 

@@ -8,10 +8,9 @@ r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 # 2. Configure Kafka Consumer
 conf = {
     'bootstrap.servers': 'localhost:9092',
-    'group.id': 'reranker-consumer-group',
-    'auto.offset.reset': 'latest'
+    'group.id': 'reranker-consumer-group-v2',  # Fresh group ID resets historical offset tracking
+    'auto.offset.reset': 'earliest'            # Read from the start of available messages
 }
-
 consumer = Consumer(conf)
 TOPIC_NAME = 'search-click-logs'
 consumer.subscribe([TOPIC_NAME])
