@@ -15,15 +15,16 @@ services:
 
   # 2. Cluster Coordinator for Kafka
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: rerank-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_JVM_PERFORMANCE_OPTS: "-Xms128m -Xmx256m"
 
   # 3. Distributed Event Streaming Broker
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
+    image: confluentinc/cp-kafka:7.5.0
     container_name: rerank-kafka
     depends_on:
       - zookeeper
@@ -35,3 +36,4 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_JVM_PERFORMANCE_OPTS: "-Xms256m -Xmx512m"
