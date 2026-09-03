@@ -110,12 +110,12 @@ def record_click(event: ClickEvent):
         "timestamp": int(time.time())
     }
 
-    # Emit event to Kafka
+    # Emit event to Kafka and flush immediately
     producer.produce(
         topic=TOPIC_NAME,
         key=payload["query"],
         value=json.dumps(payload).encode("utf-8")
     )
-    producer.poll(0)
+    producer.flush(1.0)
 
     return {"status": "success", "message": "Click event emitted to Kafka", "data": payload}

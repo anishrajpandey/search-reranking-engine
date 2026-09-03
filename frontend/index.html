@@ -958,10 +958,11 @@
         body: JSON.stringify(payload)
       });
 
+      const calculatedWeight = Math.sqrt(currentRank).toFixed(3);
       const fullKafkaPayload = {
         ...payload,
         timestamp: Math.floor(Date.now() / 1000),
-        ips_weight: (1.0 / Math.sqrt(currentRank)).toFixed(3),
+        ips_weight: calculatedWeight,
         status: "EVENT_DELIVERED_TO_KAFKA"
       };
       document.getElementById("panelKafkaPayload").innerText = JSON.stringify(fullKafkaPayload, null, 2);
@@ -970,7 +971,7 @@
       panel.classList.add("event-flash");
       setTimeout(() => panel.classList.remove("event-flash"), 600);
 
-      setTimeout(async () => {
+      const refreshResults = async () => {
         await executeSearch();
         const updatedRes = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
         if (updatedRes.ok) {
@@ -982,7 +983,10 @@
             document.getElementById("panelScore").innerText = `${updatedItem.realtime_score.toFixed(2)} pts`;
           }
         }
-      }, 180);
+      };
+
+      setTimeout(refreshResults, 300);
+      setTimeout(refreshResults, 700);
     } catch (err) {
       console.error("Click delivery failed:", err);
     }
@@ -1008,7 +1012,7 @@
     document.getElementById("panelBaseRank").innerText = `Base #${item.base_rank}`;
     document.getElementById("panelScore").innerText = `${item.realtime_score.toFixed(2)} pts`;
     
-    const weight = (1.0 / Math.sqrt(currentRank)).toFixed(3);
+    const weight = Math.sqrt(currentRank).toFixed(3);
     document.getElementById("panelWeight").innerText = `${weight}x`;
 
     const specsContainer = document.getElementById("panelSpecs");
